@@ -12,7 +12,7 @@ use crate::{
     value::ValueCommitment,
     Nullifier,
 };
-use zcash_note_encryption::note_bytes::NoteBytes;
+use zcash_note_encryption::note_bytes::NoteBytesData;
 use zcash_note_encryption::{EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE};
 
 pub type GrothProofBytes = [u8; GROTH_PROOF_SIZE];
@@ -412,8 +412,8 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<NoteBytes<ENC_CIPHERTEXT_SIZE>> {
-        Some(NoteBytes(self.enc_ciphertext))
+    fn enc_ciphertext(&self) -> Option<NoteBytesData<ENC_CIPHERTEXT_SIZE>> {
+        Some(NoteBytesData(self.enc_ciphertext))
     }
 
     fn enc_ciphertext_compact(

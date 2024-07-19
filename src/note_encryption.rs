@@ -17,7 +17,7 @@ use crate::{
     value::{NoteValue, ValueCommitment},
     Diversifier, Note, PaymentAddress, Rseed,
 };
-use zcash_note_encryption::note_bytes::NoteBytes;
+use zcash_note_encryption::note_bytes::NoteBytesData;
 use zcash_note_encryption::{
     try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
     try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
@@ -303,10 +303,10 @@ impl Domain for SaplingDomain {
         )
     }
 
-    type NotePlaintextBytes = NoteBytes<{ NOTE_PLAINTEXT_SIZE }>;
-    type NoteCiphertextBytes = NoteBytes<{ ENC_CIPHERTEXT_SIZE }>;
-    type CompactNotePlaintextBytes = NoteBytes<{ COMPACT_NOTE_SIZE }>;
-    type CompactNoteCiphertextBytes = NoteBytes<{ COMPACT_NOTE_SIZE }>;
+    type NotePlaintextBytes = NoteBytesData<{ NOTE_PLAINTEXT_SIZE }>;
+    type NoteCiphertextBytes = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
+    type CompactNotePlaintextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
+    type CompactNoteCiphertextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
 }
 
 impl BatchDomain for SaplingDomain {
@@ -365,7 +365,7 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
     }
 
     fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
-        NoteBytes::from(self.enc_ciphertext.as_ref())
+        NoteBytesData::from(self.enc_ciphertext.as_ref())
     }
 }
 

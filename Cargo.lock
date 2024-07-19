@@ -1724,7 +1724,7 @@ dependencies = [
 [[package]]
 name = "zcash_note_encryption"
 version = "0.4.0"
-source = "git+https://github.com/QED-it/zcash_note_encryption?branch=note-bytes#c18f6ec96ad840ddb518317f88d52a0c4069113b"
+source = "git+https://github.com/QED-it/zcash_note_encryption?branch=note-bytes#e6023a923194cf27668702c88e6dc5ceeb361304"
 dependencies = [
  "chacha20",
  "chacha20poly1305",
