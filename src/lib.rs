@@ -33,7 +33,6 @@ pub mod util;
 pub mod value;
 mod verifier;
 pub mod zip32;
-mod note_bytes;
 
 pub use address::PaymentAddress;
 pub use bundle::Bundle;

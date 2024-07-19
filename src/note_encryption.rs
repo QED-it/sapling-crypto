@@ -8,13 +8,6 @@ use ff::PrimeField;
 use memuse::DynamicUsage;
 use rand_core::RngCore;
 
-use zcash_note_encryption::{
-    try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
-    try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
-    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput,
-    AEAD_TAG_SIZE, OUT_PLAINTEXT_SIZE,
-};
-
 use crate::{
     bundle::{GrothProofBytes, OutputDescription},
     keys::{
@@ -24,11 +17,16 @@ use crate::{
     value::{NoteValue, ValueCommitment},
     Diversifier, Note, PaymentAddress, Rseed,
 };
+use zcash_note_encryption::note_bytes::NoteBytes;
+use zcash_note_encryption::{
+    try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
+    try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
+    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, AEAD_TAG_SIZE, OUT_PLAINTEXT_SIZE,
+};
 
 use super::note::ExtractedNoteCommitment;
 
 pub use crate::keys::{PreparedEphemeralPublicKey, PreparedIncomingViewingKey};
-use crate::note_bytes::NoteBytes;
 
 pub const KDF_SAPLING_PERSONALIZATION: &[u8; 16] = b"Zcash_SaplingKDF";
 pub const PRF_OCK_PERSONALIZATION: &[u8; 16] = b"Zcash_Derive_ock";
@@ -294,7 +292,10 @@ impl Domain for SaplingDomain {
         .into()
     }
 
-    fn extract_memo(&self, plaintext: &Self::NotePlaintextBytes) -> (Self::CompactNotePlaintextBytes, Self::Memo) {
+    fn extract_memo(
+        &self,
+        plaintext: &Self::NotePlaintextBytes,
+    ) -> (Self::CompactNotePlaintextBytes, Self::Memo) {
         let (compact, memo) = plaintext.0.split_at(COMPACT_NOTE_SIZE);
         (
             Self::CompactNotePlaintextBytes::from(compact),
@@ -438,9 +439,7 @@ pub fn try_sapling_note_decryption<Output: ShieldedOutput<SaplingDomain>>(
     try_note_decryption(&domain, ivk, output)
 }
 
-pub fn try_sapling_compact_note_decryption<
-    Output: ShieldedOutput<SaplingDomain>,
->(
+pub fn try_sapling_compact_note_decryption<Output: ShieldedOutput<SaplingDomain>>(
     ivk: &PreparedIncomingViewingKey,
     output: &Output,
     zip212_enforcement: Zip212Enforcement,
@@ -496,11 +495,16 @@ mod tests {
     use rand_core::{CryptoRng, RngCore};
 
     use zcash_note_encryption::{
-        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey,
-        OUT_CIPHERTEXT_SIZE, OUT_PLAINTEXT_SIZE,
+        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey, OUT_CIPHERTEXT_SIZE,
+        OUT_PLAINTEXT_SIZE,
     };
 
-    use super::{prf_ock, sapling_note_encryption, try_sapling_compact_note_decryption, try_sapling_note_decryption, try_sapling_output_recovery, try_sapling_output_recovery_with_ock, CompactOutputDescription, SaplingDomain, Zip212Enforcement, NOTE_PLAINTEXT_SIZE, ENC_CIPHERTEXT_SIZE};
+    use super::{
+        prf_ock, sapling_note_encryption, try_sapling_compact_note_decryption,
+        try_sapling_note_decryption, try_sapling_output_recovery,
+        try_sapling_output_recovery_with_ock, CompactOutputDescription, SaplingDomain,
+        Zip212Enforcement, ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE,
+    };
 
     use crate::{
         bundle::{GrothProofBytes, OutputDescription},
