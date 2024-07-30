@@ -419,7 +419,7 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
     }
 
     fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
-        todo!()
+        unimplemented!("This function is not required for sapling")
     }
 }
 

@@ -214,7 +214,6 @@ impl Domain for SaplingDomain {
 
         input[COMPACT_NOTE_SIZE..NOTE_PLAINTEXT_SIZE].copy_from_slice(&memo[..]);
 
-        // FIXME: avoid unwrap usage
         Self::NotePlaintextBytes::from_slice(input.as_ref()).unwrap()
     }
 
@@ -374,7 +373,6 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
     }
 
     fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
-        // FIXME: avoid unwrap usage
         NoteBytesData::from_slice(self.enc_ciphertext.as_ref()).unwrap()
     }
 }
