@@ -4,7 +4,11 @@ use memuse::DynamicUsage;
 
 use redjubjub::{Binding, SpendAuth};
 
-use crate::note_encryption::{COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE};
+use zcash_note_encryption::{
+    note_bytes::NoteBytesData, Domain, EphemeralKeyBytes, ShieldedOutput, COMPACT_NOTE_SIZE,
+    ENC_CIPHERTEXT_SIZE, OUT_CIPHERTEXT_SIZE,
+};
+
 use crate::{
     circuit::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
@@ -12,8 +16,6 @@ use crate::{
     value::ValueCommitment,
     Nullifier,
 };
-use zcash_note_encryption::note_bytes::NoteBytesData;
-use zcash_note_encryption::{EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE};
 
 pub type GrothProofBytes = [u8; GROTH_PROOF_SIZE];
 
@@ -412,13 +414,11 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<NoteBytesData<ENC_CIPHERTEXT_SIZE>> {
+    fn enc_ciphertext(&self) -> Option<<SaplingDomain as Domain>::NoteCiphertextBytes> {
         Some(NoteBytesData(self.enc_ciphertext))
     }
 
-    fn enc_ciphertext_compact(
-        &self,
-    ) -> <SaplingDomain as zcash_note_encryption::Domain>::CompactNoteCiphertextBytes {
+    fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
         todo!()
     }
 }

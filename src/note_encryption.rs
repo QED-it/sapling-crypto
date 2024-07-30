@@ -8,6 +8,14 @@ use ff::PrimeField;
 use memuse::DynamicUsage;
 use rand_core::RngCore;
 
+use zcash_note_encryption::{
+    note_bytes::{NoteBytes, NoteBytesData},
+    try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
+    try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
+    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, AEAD_TAG_SIZE, COMPACT_NOTE_SIZE,
+    ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE, OUT_PLAINTEXT_SIZE,
+};
+
 use crate::{
     bundle::{GrothProofBytes, OutputDescription},
     keys::{
@@ -17,12 +25,6 @@ use crate::{
     value::{NoteValue, ValueCommitment},
     Diversifier, Note, PaymentAddress, Rseed,
 };
-use zcash_note_encryption::note_bytes::NoteBytesData;
-use zcash_note_encryption::{
-    try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
-    try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
-    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, AEAD_TAG_SIZE, OUT_PLAINTEXT_SIZE,
-};
 
 use super::note::ExtractedNoteCommitment;
 
@@ -30,16 +32,6 @@ pub use crate::keys::{PreparedEphemeralPublicKey, PreparedIncomingViewingKey};
 
 pub const KDF_SAPLING_PERSONALIZATION: &[u8; 16] = b"Zcash_SaplingKDF";
 pub const PRF_OCK_PERSONALIZATION: &[u8; 16] = b"Zcash_Derive_ock";
-
-/// The size of a compact note.
-pub const COMPACT_NOTE_SIZE: usize = 1 + // version
-    11 + // diversifier
-    8  + // value
-    32; // rseed (or rcm prior to ZIP 212)
-/// The size of NotePlaintextBytes.
-pub const NOTE_PLAINTEXT_SIZE: usize = COMPACT_NOTE_SIZE + 512;
-/// The size of an encrypted note plaintext.
-pub const ENC_CIPHERTEXT_SIZE: usize = NOTE_PLAINTEXT_SIZE + AEAD_TAG_SIZE;
 
 /// Sapling PRF^ock.
 ///
@@ -79,13 +71,12 @@ pub enum Zip212Enforcement {
 /// valid Sapling diversifier.
 fn sapling_parse_note_plaintext_without_memo<F>(
     domain: &SaplingDomain,
-    plaintext: &<SaplingDomain as Domain>::CompactNotePlaintextBytes,
+    plaintext: &[u8],
     get_pk_d: F,
 ) -> Option<(Note, PaymentAddress)>
 where
     F: FnOnce(&Diversifier) -> Option<DiversifiedTransmissionKey>,
 {
-    let plaintext = plaintext.as_ref();
     assert!(plaintext.len() >= COMPACT_NOTE_SIZE);
 
     // Check note plaintext version
@@ -154,6 +145,11 @@ impl Domain for SaplingDomain {
     type ExtractedCommitmentBytes = [u8; 32];
     type Memo = [u8; 512];
 
+    type NotePlaintextBytes = NoteBytesData<{ NOTE_PLAINTEXT_SIZE }>;
+    type NoteCiphertextBytes = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
+    type CompactNotePlaintextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
+    type CompactNoteCiphertextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
+
     fn derive_esk(note: &Self::Note) -> Option<Self::EphemeralSecretKey> {
         note.derive_esk()
     }
@@ -218,7 +214,8 @@ impl Domain for SaplingDomain {
 
         input[COMPACT_NOTE_SIZE..NOTE_PLAINTEXT_SIZE].copy_from_slice(&memo[..]);
 
-        Self::NotePlaintextBytes::from(input.as_ref())
+        // FIXME: avoid unwrap usage
+        Self::NotePlaintextBytes::from_slice(input.as_ref()).unwrap()
     }
 
     fn derive_ock(
@@ -257,7 +254,7 @@ impl Domain for SaplingDomain {
         ivk: &Self::IncomingViewingKey,
         plaintext: &Self::CompactNotePlaintextBytes,
     ) -> Option<(Self::Note, Self::Recipient)> {
-        sapling_parse_note_plaintext_without_memo(self, plaintext, |diversifier| {
+        sapling_parse_note_plaintext_without_memo(self, plaintext.as_ref(), |diversifier| {
             DiversifiedTransmissionKey::derive(ivk, diversifier)
         })
     }
@@ -267,7 +264,7 @@ impl Domain for SaplingDomain {
         pk_d: &Self::DiversifiedTransmissionKey,
         plaintext: &Self::CompactNotePlaintextBytes,
     ) -> Option<(Self::Note, Self::Recipient)> {
-        sapling_parse_note_plaintext_without_memo(self, plaintext, |diversifier| {
+        sapling_parse_note_plaintext_without_memo(self, &plaintext.0, |diversifier| {
             diversifier.g_d().map(|_| *pk_d)
         })
     }
@@ -292,21 +289,33 @@ impl Domain for SaplingDomain {
         .into()
     }
 
-    fn extract_memo(
+    fn split_plaintext_at_memo(
         &self,
         plaintext: &Self::NotePlaintextBytes,
-    ) -> (Self::CompactNotePlaintextBytes, Self::Memo) {
+    ) -> Option<(Self::CompactNotePlaintextBytes, Self::Memo)> {
         let (compact, memo) = plaintext.0.split_at(COMPACT_NOTE_SIZE);
-        (
-            Self::CompactNotePlaintextBytes::from(compact),
-            memo.try_into().unwrap(),
-        )
+        Some((
+            Self::parse_compact_note_plaintext_bytes(compact)?,
+            memo.try_into().ok()?,
+        ))
     }
 
-    type NotePlaintextBytes = NoteBytesData<{ NOTE_PLAINTEXT_SIZE }>;
-    type NoteCiphertextBytes = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
-    type CompactNotePlaintextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
-    type CompactNoteCiphertextBytes = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
+    fn parse_note_plaintext_bytes(plaintext: &[u8]) -> Option<Self::NotePlaintextBytes> {
+        Self::NotePlaintextBytes::from_slice(plaintext)
+    }
+
+    fn parse_note_ciphertext_bytes(
+        output: &[u8],
+        tag: [u8; AEAD_TAG_SIZE],
+    ) -> Option<Self::NoteCiphertextBytes> {
+        Self::NoteCiphertextBytes::from_slice_with_tag(output, tag)
+    }
+
+    fn parse_compact_note_plaintext_bytes(
+        plaintext: &[u8],
+    ) -> Option<Self::CompactNotePlaintextBytes> {
+        Self::CompactNotePlaintextBytes::from_slice(plaintext)
+    }
 }
 
 impl BatchDomain for SaplingDomain {
@@ -365,7 +374,8 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
     }
 
     fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
-        NoteBytesData::from(self.enc_ciphertext.as_ref())
+        // FIXME: avoid unwrap usage
+        NoteBytesData::from_slice(self.enc_ciphertext.as_ref()).unwrap()
     }
 }
 
@@ -495,15 +505,15 @@ mod tests {
     use rand_core::{CryptoRng, RngCore};
 
     use zcash_note_encryption::{
-        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey, OUT_CIPHERTEXT_SIZE,
-        OUT_PLAINTEXT_SIZE,
+        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey, ENC_CIPHERTEXT_SIZE,
+        NOTE_PLAINTEXT_SIZE, OUT_CIPHERTEXT_SIZE, OUT_PLAINTEXT_SIZE,
     };
 
     use super::{
         prf_ock, sapling_note_encryption, try_sapling_compact_note_decryption,
         try_sapling_note_decryption, try_sapling_output_recovery,
         try_sapling_output_recovery_with_ock, CompactOutputDescription, SaplingDomain,
-        Zip212Enforcement, ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE,
+        Zip212Enforcement,
     };
 
     use crate::{
