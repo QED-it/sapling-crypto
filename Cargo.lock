@@ -1795,8 +1795,7 @@ dependencies = [
 [[package]]
 name = "zcash_note_encryption"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b4580cd6cee12e44421dac43169be8d23791650816bdb34e6ddfa70ac89c1c5"
+source = "git+https://github.com/QED-it/zcash_note_encryption?branch=zsa1#58384553aab76b2ee6d6eb328cf2187fa824ec9a"
 dependencies = [
  "chacha20",
  "chacha20poly1305",

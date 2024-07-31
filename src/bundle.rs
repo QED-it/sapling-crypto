@@ -5,7 +5,8 @@ use memuse::DynamicUsage;
 use redjubjub::{Binding, SpendAuth};
 
 use zcash_note_encryption::{
-    EphemeralKeyBytes, ShieldedOutput, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE, OUT_CIPHERTEXT_SIZE,
+    note_bytes::NoteBytesData, Domain, EphemeralKeyBytes, ShieldedOutput, COMPACT_NOTE_SIZE,
+    ENC_CIPHERTEXT_SIZE, OUT_CIPHERTEXT_SIZE,
 };
 
 use crate::{
@@ -404,7 +405,7 @@ impl<Proof: DynamicUsage> DynamicUsage for OutputDescription<Proof> {
     }
 }
 
-impl<A> ShieldedOutput<SaplingDomain, ENC_CIPHERTEXT_SIZE> for OutputDescription<A> {
+impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
     fn ephemeral_key(&self) -> EphemeralKeyBytes {
         self.ephemeral_key.clone()
     }
@@ -413,8 +414,12 @@ impl<A> ShieldedOutput<SaplingDomain, ENC_CIPHERTEXT_SIZE> for OutputDescription
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> &[u8; ENC_CIPHERTEXT_SIZE] {
-        &self.enc_ciphertext
+    fn enc_ciphertext(&self) -> Option<<SaplingDomain as Domain>::NoteCiphertextBytes> {
+        Some(NoteBytesData(self.enc_ciphertext))
+    }
+
+    fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
+        unimplemented!("This function is not required for sapling")
     }
 }
 
