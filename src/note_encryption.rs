@@ -12,8 +12,8 @@ use zcash_note_encryption::{
     note_bytes::{NoteBytes, NoteBytesData},
     try_compact_note_decryption, try_note_decryption, try_output_recovery_with_ock,
     try_output_recovery_with_ovk, BatchDomain, Domain, EphemeralKeyBytes, NoteEncryption,
-    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, AEAD_TAG_SIZE, COMPACT_NOTE_SIZE,
-    ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE, OUT_PLAINTEXT_SIZE,
+    OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
+    NOTE_PLAINTEXT_SIZE, OUT_PLAINTEXT_SIZE,
 };
 
 use crate::{
@@ -297,23 +297,6 @@ impl Domain for SaplingDomain {
             Self::parse_compact_note_plaintext_bytes(compact)?,
             memo.try_into().ok()?,
         ))
-    }
-
-    fn parse_note_plaintext_bytes(plaintext: &[u8]) -> Option<Self::NotePlaintextBytes> {
-        Self::NotePlaintextBytes::from_slice(plaintext)
-    }
-
-    fn parse_note_ciphertext_bytes(
-        output: &[u8],
-        tag: [u8; AEAD_TAG_SIZE],
-    ) -> Option<Self::NoteCiphertextBytes> {
-        Self::NoteCiphertextBytes::from_slice_with_tag(output, tag)
-    }
-
-    fn parse_compact_note_plaintext_bytes(
-        plaintext: &[u8],
-    ) -> Option<Self::CompactNotePlaintextBytes> {
-        Self::CompactNotePlaintextBytes::from_slice(plaintext)
     }
 }
 
