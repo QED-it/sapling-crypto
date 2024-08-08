@@ -263,7 +263,7 @@ impl Domain for SaplingDomain {
         pk_d: &Self::DiversifiedTransmissionKey,
         plaintext: &Self::CompactNotePlaintextBytes,
     ) -> Option<(Self::Note, Self::Recipient)> {
-        sapling_parse_note_plaintext_without_memo(self, &plaintext.0, |diversifier| {
+        sapling_parse_note_plaintext_without_memo(self, plaintext.as_ref(), |diversifier| {
             diversifier.g_d().map(|_| *pk_d)
         })
     }
@@ -351,7 +351,7 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<<SaplingDomain as Domain>::NoteCiphertextBytes> {
+    fn enc_ciphertext(&self) -> Option<&<SaplingDomain as Domain>::NoteCiphertextBytes> {
         None
     }
 
@@ -493,8 +493,8 @@ mod tests {
     use super::{
         prf_ock, sapling_note_encryption, try_sapling_compact_note_decryption,
         try_sapling_note_decryption, try_sapling_output_recovery,
-        try_sapling_output_recovery_with_ock, CompactOutputDescription, SaplingDomain,
-        Zip212Enforcement,
+        try_sapling_output_recovery_with_ock, CompactOutputDescription, NoteBytesData,
+        SaplingDomain, Zip212Enforcement,
     };
 
     use crate::{
@@ -620,7 +620,7 @@ mod tests {
         cv: &ValueCommitment,
         cmu: &ExtractedNoteCommitment,
         ephemeral_key: &EphemeralKeyBytes,
-        enc_ciphertext: &[u8; ENC_CIPHERTEXT_SIZE],
+        enc_ciphertext: &NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>,
         out_ciphertext: &[u8; OUT_CIPHERTEXT_SIZE],
         modify_plaintext: impl Fn(&mut [u8; NOTE_PLAINTEXT_SIZE]),
     ) -> [u8; ENC_CIPHERTEXT_SIZE] {
@@ -646,14 +646,14 @@ mod tests {
         let key = shared_secret.kdf_sapling(ephemeral_key);
 
         let mut plaintext = [0; NOTE_PLAINTEXT_SIZE];
-        plaintext.copy_from_slice(&enc_ciphertext[..NOTE_PLAINTEXT_SIZE]);
+        plaintext.copy_from_slice(&enc_ciphertext.as_ref()[..NOTE_PLAINTEXT_SIZE]);
 
         ChaCha20Poly1305::new(key.as_bytes().into())
             .decrypt_in_place_detached(
                 [0u8; 12][..].into(),
                 &[],
                 &mut plaintext,
-                enc_ciphertext[NOTE_PLAINTEXT_SIZE..].into(),
+                enc_ciphertext.as_ref()[NOTE_PLAINTEXT_SIZE..].into(),
             )
             .unwrap();
 

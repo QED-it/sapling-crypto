@@ -321,7 +321,7 @@ pub struct OutputDescription<Proof> {
     cv: ValueCommitment,
     cmu: ExtractedNoteCommitment,
     ephemeral_key: EphemeralKeyBytes,
-    enc_ciphertext: [u8; ENC_CIPHERTEXT_SIZE],
+    enc_ciphertext: NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>,
     out_ciphertext: [u8; OUT_CIPHERTEXT_SIZE],
     zkproof: Proof,
 }
@@ -342,7 +342,7 @@ impl<Proof> OutputDescription<Proof> {
     }
 
     /// Returns the encrypted note ciphertext.
-    pub fn enc_ciphertext(&self) -> &[u8; ENC_CIPHERTEXT_SIZE] {
+    pub fn enc_ciphertext(&self) -> &<SaplingDomain as Domain>::NoteCiphertextBytes {
         &self.enc_ciphertext
     }
 
@@ -369,7 +369,7 @@ impl<Proof> OutputDescription<Proof> {
             cv,
             cmu,
             ephemeral_key,
-            enc_ciphertext,
+            enc_ciphertext: NoteBytesData(enc_ciphertext),
             out_ciphertext,
             zkproof,
         }
@@ -388,7 +388,7 @@ impl<Proof> OutputDescription<Proof> {
         &mut self.ephemeral_key
     }
     pub(crate) fn enc_ciphertext_mut(&mut self) -> &mut [u8; ENC_CIPHERTEXT_SIZE] {
-        &mut self.enc_ciphertext
+        &mut self.enc_ciphertext.0
     }
     pub(crate) fn out_ciphertext_mut(&mut self) -> &mut [u8; OUT_CIPHERTEXT_SIZE] {
         &mut self.out_ciphertext
@@ -414,8 +414,8 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<<SaplingDomain as Domain>::NoteCiphertextBytes> {
-        Some(NoteBytesData(self.enc_ciphertext))
+    fn enc_ciphertext(&self) -> Option<&<SaplingDomain as Domain>::NoteCiphertextBytes> {
+        Some(&self.enc_ciphertext)
     }
 
     fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
@@ -470,7 +470,7 @@ impl OutputDescriptionV5 {
             cv: self.cv,
             cmu: self.cmu,
             ephemeral_key: self.ephemeral_key,
-            enc_ciphertext: self.enc_ciphertext,
+            enc_ciphertext: NoteBytesData(self.enc_ciphertext),
             out_ciphertext: self.out_ciphertext,
             zkproof,
         }
@@ -482,7 +482,9 @@ impl<A> From<OutputDescription<A>> for CompactOutputDescription {
         CompactOutputDescription {
             ephemeral_key: out.ephemeral_key,
             cmu: out.cmu,
-            enc_ciphertext: out.enc_ciphertext[..COMPACT_NOTE_SIZE].try_into().unwrap(),
+            enc_ciphertext: out.enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE]
+                .try_into()
+                .unwrap(),
         }
     }
 }
@@ -509,7 +511,7 @@ pub mod testing {
     };
 
     use super::{
-        Authorized, Bundle, GrothProofBytes, OutputDescription, SpendDescription,
+        Authorized, Bundle, GrothProofBytes, NoteBytesData, OutputDescription, SpendDescription,
         ENC_CIPHERTEXT_SIZE, OUT_CIPHERTEXT_SIZE,
     };
 
@@ -572,7 +574,7 @@ pub mod testing {
                 cv,
                 cmu,
                 ephemeral_key: epk.to_bytes().into(),
-                enc_ciphertext,
+                enc_ciphertext: NoteBytesData(enc_ciphertext),
                 out_ciphertext,
                 zkproof,
             }
