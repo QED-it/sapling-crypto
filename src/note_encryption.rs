@@ -388,7 +388,7 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
 /// use rand_core::OsRng;
 /// use sapling_crypto::{
 ///     keys::OutgoingViewingKey,
-///     note_encryption::{sapling_note_encryption, Zip212Enforcement},
+///     note_encryption::{sapling_note_encryption, Zip212Enforcement, MEMO_SIZE},
 ///     util::generate_random_rseed,
 ///     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
 ///     Diversifier, PaymentAddress, Rseed, SaplingIvk,
