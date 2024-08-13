@@ -497,8 +497,8 @@ mod tests {
     use rand_core::{CryptoRng, RngCore};
 
     use zcash_note_encryption::{
-        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey, ENC_CIPHERTEXT_SIZE,
-        NOTE_PLAINTEXT_SIZE, OUT_CIPHERTEXT_SIZE, OUT_PLAINTEXT_SIZE,
+        batch, EphemeralKeyBytes, NoteEncryption, OutgoingCipherKey, OUT_CIPHERTEXT_SIZE,
+        OUT_PLAINTEXT_SIZE,
     };
 
     use super::{
@@ -513,7 +513,7 @@ mod tests {
         circuit::GROTH_PROOF_SIZE,
         keys::{DiversifiedTransmissionKey, EphemeralSecretKey, OutgoingViewingKey},
         note::ExtractedNoteCommitment,
-        note_encryption::PreparedIncomingViewingKey,
+        note_encryption::{PreparedIncomingViewingKey, ENC_CIPHERTEXT_SIZE, NOTE_PLAINTEXT_SIZE},
         util::generate_random_rseed,
         value::{NoteValue, ValueCommitTrapdoor, ValueCommitment},
         Diversifier, PaymentAddress, Rseed, SaplingIvk,
