@@ -5,14 +5,15 @@ use memuse::DynamicUsage;
 use redjubjub::{Binding, SpendAuth};
 
 use zcash_note_encryption::{
-    note_bytes::NoteBytesData, Domain, EphemeralKeyBytes, ShieldedOutput, COMPACT_NOTE_SIZE,
-    ENC_CIPHERTEXT_SIZE, OUT_CIPHERTEXT_SIZE,
+    note_bytes::NoteBytesData, Domain, EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE,
 };
 
 use crate::{
     circuit::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
-    note_encryption::{CompactOutputDescription, SaplingDomain},
+    note_encryption::{
+        CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
+    },
     value::ValueCommitment,
     Nullifier,
 };
