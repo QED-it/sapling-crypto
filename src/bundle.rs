@@ -5,7 +5,7 @@ use memuse::DynamicUsage;
 use redjubjub::{Binding, SpendAuth};
 
 use zcash_note_encryption::{
-    note_bytes::NoteBytesData, Domain, EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE,
+    note_bytes::NoteBytesData, EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE,
 };
 
 use crate::{
@@ -343,7 +343,7 @@ impl<Proof> OutputDescription<Proof> {
     }
 
     /// Returns the encrypted note ciphertext.
-    pub fn enc_ciphertext(&self) -> &<SaplingDomain as Domain>::NoteCiphertextBytes {
+    pub fn enc_ciphertext(&self) -> &NoteBytesData<{ ENC_CIPHERTEXT_SIZE }> {
         &self.enc_ciphertext
     }
 
@@ -415,11 +415,11 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<&<SaplingDomain as Domain>::NoteCiphertextBytes> {
+    fn enc_ciphertext(&self) -> Option<&NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>> {
         Some(&self.enc_ciphertext)
     }
 
-    fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
+    fn enc_ciphertext_compact(&self) -> NoteBytesData<{ COMPACT_NOTE_SIZE }> {
         unimplemented!("This function is not required for sapling")
     }
 }

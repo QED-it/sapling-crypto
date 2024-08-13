@@ -362,11 +362,11 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<&<SaplingDomain as Domain>::NoteCiphertextBytes> {
+    fn enc_ciphertext(&self) -> Option<&NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>> {
         None
     }
 
-    fn enc_ciphertext_compact(&self) -> <SaplingDomain as Domain>::CompactNoteCiphertextBytes {
+    fn enc_ciphertext_compact(&self) -> NoteBytesData<{ COMPACT_NOTE_SIZE }> {
         NoteBytesData::from_slice(self.enc_ciphertext.as_ref()).unwrap()
     }
 }
