@@ -15,6 +15,9 @@ use zcash_note_encryption::{
     OutPlaintextBytes, OutgoingCipherKey, ShieldedOutput, AEAD_TAG_SIZE, OUT_PLAINTEXT_SIZE,
 };
 
+/// The size of the memo.
+pub(crate) const MEMO_SIZE: usize = 512;
+
 /// The size of a compact note.
 pub const COMPACT_NOTE_SIZE: usize = 1 + // version
     11 + // diversifier
@@ -22,7 +25,7 @@ pub const COMPACT_NOTE_SIZE: usize = 1 + // version
     32; // rseed (or rcm prior to ZIP 212)
 
 /// The size of [`Domain::NotePlaintextBytes`].
-pub const NOTE_PLAINTEXT_SIZE: usize = COMPACT_NOTE_SIZE + 512;
+pub const NOTE_PLAINTEXT_SIZE: usize = COMPACT_NOTE_SIZE + MEMO_SIZE;
 
 /// The size of an encrypted note plaintext.
 pub const ENC_CIPHERTEXT_SIZE: usize = NOTE_PLAINTEXT_SIZE + AEAD_TAG_SIZE;
@@ -154,7 +157,7 @@ impl Domain for SaplingDomain {
     type ValueCommitment = ValueCommitment;
     type ExtractedCommitment = ExtractedNoteCommitment;
     type ExtractedCommitmentBytes = [u8; 32];
-    type Memo = [u8; 512];
+    type Memo = [u8; MEMO_SIZE];
 
     type NotePlaintextBytes = NoteBytesData<{ NOTE_PLAINTEXT_SIZE }>;
     type NoteCiphertextBytes = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
@@ -408,14 +411,14 @@ impl ShieldedOutput<SaplingDomain> for CompactOutputDescription {
 /// let note = to.create_note(value, rseed);
 /// let cmu = note.cmu();
 ///
-/// let mut enc = sapling_note_encryption(ovk, note, [0x37; 512], &mut rng);
+/// let mut enc = sapling_note_encryption(ovk, note, [0x37; MEMO_SIZE], &mut rng);
 /// let encCiphertext = enc.encrypt_note_plaintext();
 /// let outCiphertext = enc.encrypt_outgoing_plaintext(&cv, &cmu, &mut rng);
 /// ```
 pub fn sapling_note_encryption<R: RngCore>(
     ovk: Option<OutgoingViewingKey>,
     note: Note,
-    memo: [u8; 512],
+    memo: [u8; MEMO_SIZE],
     rng: &mut R,
 ) -> NoteEncryption<SaplingDomain> {
     let esk = note.generate_or_derive_esk_internal(rng);
@@ -436,7 +439,7 @@ pub fn try_sapling_note_decryption<Output: ShieldedOutput<SaplingDomain>>(
     ivk: &PreparedIncomingViewingKey,
     output: &Output,
     zip212_enforcement: Zip212Enforcement,
-) -> Option<(Note, PaymentAddress, [u8; 512])> {
+) -> Option<(Note, PaymentAddress, [u8; MEMO_SIZE])> {
     let domain = SaplingDomain::new(zip212_enforcement);
     try_note_decryption(&domain, ivk, output)
 }
@@ -462,7 +465,7 @@ pub fn try_sapling_output_recovery_with_ock(
     ock: &OutgoingCipherKey,
     output: &OutputDescription<GrothProofBytes>,
     zip212_enforcement: Zip212Enforcement,
-) -> Option<(Note, PaymentAddress, [u8; 512])> {
+) -> Option<(Note, PaymentAddress, [u8; MEMO_SIZE])> {
     let domain = SaplingDomain::new(zip212_enforcement);
     try_output_recovery_with_ock(&domain, ock, output, output.out_ciphertext())
 }
@@ -479,7 +482,7 @@ pub fn try_sapling_output_recovery(
     ovk: &OutgoingViewingKey,
     output: &OutputDescription<GrothProofBytes>,
     zip212_enforcement: Zip212Enforcement,
-) -> Option<(Note, PaymentAddress, [u8; 512])> {
+) -> Option<(Note, PaymentAddress, [u8; MEMO_SIZE])> {
     let domain = SaplingDomain::new(zip212_enforcement);
     try_output_recovery_with_ovk(&domain, ovk, output, output.cv(), output.out_ciphertext())
 }
@@ -505,7 +508,7 @@ mod tests {
         prf_ock, sapling_note_encryption, try_sapling_compact_note_decryption,
         try_sapling_note_decryption, try_sapling_output_recovery,
         try_sapling_output_recovery_with_ock, CompactOutputDescription, NoteBytesData,
-        SaplingDomain, Zip212Enforcement,
+        SaplingDomain, Zip212Enforcement, MEMO_SIZE,
     };
 
     use crate::{
@@ -575,7 +578,7 @@ mod tests {
         let cmu = note.cmu();
 
         let ovk = OutgoingViewingKey([0; 32]);
-        let ne = sapling_note_encryption(Some(ovk), note, [0x37; 512], &mut rng);
+        let ne = sapling_note_encryption(Some(ovk), note, [0x37; MEMO_SIZE], &mut rng);
         let epk = ne.epk();
         let ock = prf_ock(&ovk, &cv, &cmu.to_bytes(), &epk.to_bytes());
 
