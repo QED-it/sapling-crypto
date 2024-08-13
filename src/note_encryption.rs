@@ -16,7 +16,7 @@ use zcash_note_encryption::{
 };
 
 /// The size of the memo.
-pub(crate) const MEMO_SIZE: usize = 512;
+pub const MEMO_SIZE: usize = 512;
 
 /// The size of a compact note.
 pub const COMPACT_NOTE_SIZE: usize = 1 + // version
