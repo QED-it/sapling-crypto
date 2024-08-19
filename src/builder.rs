@@ -15,7 +15,7 @@ use crate::{
     },
     circuit,
     keys::{OutgoingViewingKey, SpendAuthorizingKey, SpendValidatingKey},
-    note_encryption::{sapling_note_encryption, Zip212Enforcement},
+    note_encryption::{sapling_note_encryption, Zip212Enforcement, MEMO_SIZE},
     prover::{OutputProver, SpendProver},
     util::generate_random_rseed_internal,
     value::{
@@ -281,7 +281,7 @@ pub struct OutputInfo {
     ovk: Option<OutgoingViewingKey>,
     to: PaymentAddress,
     value: NoteValue,
-    memo: [u8; 512],
+    memo: [u8; MEMO_SIZE],
 }
 
 impl OutputInfo {
@@ -290,14 +290,14 @@ impl OutputInfo {
         ovk: Option<OutgoingViewingKey>,
         to: PaymentAddress,
         value: NoteValue,
-        memo: Option<[u8; 512]>,
+        memo: Option<[u8; MEMO_SIZE]>,
     ) -> Self {
         Self {
             ovk,
             to,
             value,
             memo: memo.unwrap_or_else(|| {
-                let mut memo = [0; 512];
+                let mut memo = [0; MEMO_SIZE];
                 memo[0] = 0xf6;
                 memo
             }),
@@ -353,7 +353,7 @@ struct PreparedOutputInfo {
     /// `None` represents the `ovk = ⊥` case.
     ovk: Option<OutgoingViewingKey>,
     note: Note,
-    memo: [u8; 512],
+    memo: [u8; MEMO_SIZE],
     rcv: ValueCommitTrapdoor,
 }
 
@@ -523,7 +523,7 @@ impl Builder {
         ovk: Option<OutgoingViewingKey>,
         to: PaymentAddress,
         value: NoteValue,
-        memo: Option<[u8; 512]>,
+        memo: Option<[u8; MEMO_SIZE]>,
     ) -> Result<(), Error> {
         let output = OutputInfo::new(ovk, to, value, memo);
 
