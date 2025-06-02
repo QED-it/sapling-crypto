@@ -50,6 +50,8 @@ jobs:
       # be incompatible with some of these targets.
       - name: Create synthetic crate for testing
         run: cargo init --lib ci-build
+      - name: Set edition for compatibility
+        run: sed -i 's/edition = .*/edition = "2021"/' ci-build/Cargo.toml
       - name: Copy Rust version into synthetic crate
         run: cp crate_root/rust-toolchain.toml ci-build/
       - name: Copy patch directives into synthetic crate
