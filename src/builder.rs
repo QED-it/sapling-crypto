@@ -25,6 +25,7 @@ use crate::{
     NOTE_COMMITMENT_TREE_DEPTH,
 };
 
+use crate::note_encryption::MEMO_SIZE;
 #[cfg(feature = "circuit")]
 use crate::{
     bundle::{OutputDescription, SpendDescription},
@@ -401,7 +402,7 @@ impl OutputInfo {
             }
         };
 
-        Self::new(None, dummy_to, NoteValue::ZERO, [0u8; 512])
+        Self::new(None, dummy_to, NoteValue::ZERO, None)
     }
 
     fn prepare<R: RngCore>(
@@ -461,7 +462,7 @@ impl PreparedOutputInfo {
             cv,
             cmu,
             epk.to_bytes(),
-            enc_ciphertext,
+            enc_ciphertext.0,
             out_ciphertext,
             zkproof,
         )
