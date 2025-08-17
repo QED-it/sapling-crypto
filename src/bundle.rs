@@ -3,7 +3,7 @@ use core::fmt::Debug;
 
 use memuse::DynamicUsage;
 
-use redjubjub::{Binding, SpendAuth};
+use redjubjub::SpendAuth;
 
 use zcash_note_encryption::{
     note_bytes::NoteBytesData, EphemeralKeyBytes, ShieldedOutput, OUT_CIPHERTEXT_SIZE,
@@ -14,6 +14,9 @@ use crate::{
     note::ExtractedNoteCommitment,
     note_encryption::{
         CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
+    },
+    signature_with_sighash_info::{
+        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo,
     },
     value::ValueCommitment,
     Nullifier,
@@ -40,16 +43,16 @@ impl Authorization for EffectsOnly {
 
 /// Authorizing data for a bundle of Sapling spends and outputs, ready to be committed to
 /// the ledger.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct Authorized {
     // TODO: Make this private.
-    pub binding_sig: redjubjub::Signature<Binding>,
+    pub binding_sig: BindingSignatureWithSighashInfo,
 }
 
 impl Authorization for Authorized {
     type SpendProof = GrothProofBytes;
     type OutputProof = GrothProofBytes;
-    type AuthSig = redjubjub::Signature<SpendAuth>;
+    type AuthSig = SpendAuthSignatureWithSighashInfo;
 }
 
 #[derive(Debug, Clone)]
@@ -315,7 +318,7 @@ impl SpendDescriptionV5 {
         self,
         anchor: bls12_381::Scalar,
         zkproof: GrothProofBytes,
-        spend_auth_sig: redjubjub::Signature<SpendAuth>,
+        spend_auth_sig: redjubjub::Signature<SpendAuth>, // TODO
     ) -> SpendDescription<A>
     where
         A: Authorization<SpendProof = GrothProofBytes, AuthSig = redjubjub::Signature<SpendAuth>>,
@@ -522,6 +525,9 @@ pub mod testing {
     use crate::{
         constants::GROTH_PROOF_SIZE,
         note::testing::arb_cmu,
+        signature_with_sighash_info::{
+            BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
+        },
         value::{
             testing::{arb_note_value_bounded, arb_trapdoor},
             ValueCommitment, MAX_NOTE_VALUE,
@@ -568,7 +574,7 @@ pub mod testing {
                 nullifier,
                 rk,
                 zkproof,
-                spend_auth_sig: sk1.sign(&mut rng, &fake_sighash_bytes),
+                spend_auth_sig: SpendAuthSignatureWithSighashInfo::new(SAPLING_SIG_V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
             }
         }
     }
@@ -625,7 +631,10 @@ pub mod testing {
                             shielded_outputs,
                             value_balance,
                             authorization: Authorized {
-                                binding_sig: bsk.sign(&mut rng, &fake_bvk_bytes),
+                                binding_sig: BindingSignatureWithSighashInfo::new(
+                                    SAPLING_SIG_V0,
+                                    bsk.sign(&mut rng, &fake_bvk_bytes),
+                                ),
                             },
                         })
                     }

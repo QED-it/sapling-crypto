@@ -14,6 +14,7 @@ use crate::{
     bundle::GrothProofBytes,
     keys::SpendAuthorizingKey,
     note::ExtractedNoteCommitment,
+    signature_with_sighash_info::SpendAuthSignatureWithSighashInfo,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, MerklePath, Nullifier, PaymentAddress, ProofGenerationKey, Rseed,
 };
@@ -117,7 +118,7 @@ pub struct Spend {
     /// The spend authorization signature.
     ///
     /// This is set by the Signer.
-    pub(crate) spend_auth_sig: Option<redjubjub::Signature<SpendAuth>>,
+    pub(crate) spend_auth_sig: Option<SpendAuthSignatureWithSighashInfo>,
 
     /// The address that received the note being spent.
     ///

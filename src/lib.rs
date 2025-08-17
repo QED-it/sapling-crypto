@@ -38,6 +38,7 @@ pub mod pczt;
 pub mod pedersen_hash;
 #[cfg(feature = "circuit")]
 pub mod prover;
+mod signature_with_sighash_info;
 mod spec;
 mod tree;
 pub mod util;

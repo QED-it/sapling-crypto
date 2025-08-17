@@ -19,6 +19,9 @@ use crate::{
     },
     note::ExtractedNoteCommitment,
     note_encryption::{sapling_note_encryption, Zip212Enforcement},
+    signature_with_sighash_info::{
+        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
+    },
     util::generate_random_rseed_internal,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, Diversifier, MerklePath, Node, Note, Nullifier, PaymentAddress, SaplingIvk,
@@ -1124,7 +1127,7 @@ pub struct SigningParts {
 /// Marker for a partially-authorized bundle, in the process of being signed.
 #[derive(Clone, Debug)]
 pub struct PartiallyAuthorized {
-    binding_signature: redjubjub::Signature<Binding>,
+    binding_signature: BindingSignatureWithSighashInfo,
     sighash: [u8; 32],
 }
 
@@ -1152,11 +1155,11 @@ pub enum MaybeSigned {
     /// The information needed to sign this [`SpendDescription`].
     SigningParts(SigningParts),
     /// The signature for this [`SpendDescription`].
-    Signature(redjubjub::Signature<SpendAuth>),
+    Signature(SpendAuthSignatureWithSighashInfo),
 }
 
 impl MaybeSigned {
-    fn finalize(self) -> Result<redjubjub::Signature<SpendAuth>, Error> {
+    fn finalize(self) -> Result<SpendAuthSignatureWithSighashInfo, Error> {
         match self {
             Self::Signature(sig) => Ok(sig),
             _ => Err(Error::MissingSignatures),
@@ -1179,13 +1182,17 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, Unsigned>, V> {
             |_, proof| proof,
             |rng, SigningMetadata { dummy_ask, parts }| match dummy_ask {
                 None => MaybeSigned::SigningParts(parts),
-                Some(ask) => {
-                    MaybeSigned::Signature(ask.randomize(&parts.alpha).sign(rng, &sighash))
-                }
+                Some(ask) => MaybeSigned::Signature(SpendAuthSignatureWithSighashInfo::new(
+                    SAPLING_SIG_V0,
+                    ask.randomize(&parts.alpha).sign(rng, &sighash),
+                )),
             },
             |rng, auth: InProgress<P, Unsigned>| InProgress {
                 sigs: PartiallyAuthorized {
-                    binding_signature: auth.sigs.bsk.sign(rng, &sighash),
+                    binding_signature: BindingSignatureWithSighashInfo::new(
+                        SAPLING_SIG_V0,
+                        auth.sigs.bsk.sign(rng, &sighash),
+                    ),
                     sighash,
                 },
                 _proof_state: PhantomData,
@@ -1227,7 +1234,10 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             |_, proof| proof,
             |rng, maybe| match maybe {
                 MaybeSigned::SigningParts(parts) if parts.ak == expected_ak => {
-                    MaybeSigned::Signature(ask.randomize(&parts.alpha).sign(rng, &sighash))
+                    MaybeSigned::Signature(SpendAuthSignatureWithSighashInfo::new(
+                        SAPLING_SIG_V0,
+                        ask.randomize(&parts.alpha).sign(rng, &sighash),
+                    ))
                 }
                 s => s,
             },
@@ -1242,12 +1252,15 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
     /// for more than one input.
     pub fn append_signatures(
         self,
-        signatures: &[redjubjub::Signature<SpendAuth>],
+        signatures: &[SpendAuthSignatureWithSighashInfo],
     ) -> Result<Self, Error> {
         signatures.iter().try_fold(self, Self::append_signature)
     }
 
-    fn append_signature(self, signature: &redjubjub::Signature<SpendAuth>) -> Result<Self, Error> {
+    fn append_signature(
+        self,
+        signature: &SpendAuthSignatureWithSighashInfo,
+    ) -> Result<Self, Error> {
         let sighash = self.authorization().sigs.sighash;
         let mut signature_valid_for = 0usize;
         let bundle = self.map_authorization(
@@ -1257,9 +1270,9 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             |ctx, maybe| match maybe {
                 MaybeSigned::SigningParts(parts) => {
                     let rk = parts.ak.randomize(&parts.alpha);
-                    if rk.verify(&sighash, signature).is_ok() {
+                    if rk.verify(&sighash, signature.signature()).is_ok() {
                         **ctx += 1;
-                        MaybeSigned::Signature(*signature)
+                        MaybeSigned::Signature(signature.clone())
                     } else {
                         // Signature isn't for this input.
                         MaybeSigned::SigningParts(parts)
