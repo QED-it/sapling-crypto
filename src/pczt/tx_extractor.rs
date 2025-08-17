@@ -5,6 +5,9 @@ use crate::{
         Authorization, Authorized, EffectsOnly, GrothProofBytes, OutputDescription,
         SpendDescription,
     },
+    signature_with_sighash_info::{
+        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
+    },
     Bundle,
 };
 
@@ -35,6 +38,7 @@ impl super::Bundle {
             |spend| {
                 spend
                     .spend_auth_sig
+                    .clone()
                     .ok_or(TxExtractorError::MissingSpendAuthSig)
             },
             |output| output.zkproof.ok_or(TxExtractorError::MissingProof),
@@ -132,7 +136,7 @@ pub struct Unbound {
 impl Authorization for Unbound {
     type SpendProof = GrothProofBytes;
     type OutputProof = GrothProofBytes;
-    type AuthSig = redjubjub::Signature<redjubjub::SpendAuth>;
+    type AuthSig = SpendAuthSignatureWithSighashInfo;
 }
 
 impl<V> crate::Bundle<Unbound, V> {
@@ -144,18 +148,22 @@ impl<V> crate::Bundle<Unbound, V> {
         sighash: [u8; 32],
         rng: R,
     ) -> Option<crate::Bundle<Authorized, V>> {
-        if self
-            .shielded_spends()
-            .iter()
-            .all(|spend| spend.rk().verify(&sighash, spend.spend_auth_sig()).is_ok())
-        {
+        if self.shielded_spends().iter().all(|spend| {
+            spend
+                .rk()
+                .verify(&sighash, spend.spend_auth_sig().signature())
+                .is_ok()
+        }) {
             Some(self.map_authorization(
                 &mut (),
                 |_, p| p,
                 |_, p| p,
                 |_, s| s,
                 |_, Unbound { bsk }| Authorized {
-                    binding_sig: bsk.sign(rng, &sighash),
+                    binding_sig: BindingSignatureWithSighashInfo::new(
+                        SAPLING_SIG_V0,
+                        bsk.sign(rng, &sighash),
+                    ),
                 },
             ))
         } else {

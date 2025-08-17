@@ -1,6 +1,9 @@
 use rand::{CryptoRng, RngCore};
 
-use crate::keys::SpendAuthorizingKey;
+use crate::{
+    keys::SpendAuthorizingKey,
+    signature_with_sighash_info::{SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0},
+};
 
 impl super::Spend {
     /// Signs the Sapling spend with the given spend authorizing key.
@@ -20,7 +23,10 @@ impl super::Spend {
         let rk = redjubjub::VerificationKey::from(&rsk);
 
         if self.rk == rk {
-            self.spend_auth_sig = Some(rsk.sign(rng, &sighash));
+            self.spend_auth_sig = Some(SpendAuthSignatureWithSighashInfo::new(
+                SAPLING_SIG_V0,
+                rsk.sign(rng, &sighash),
+            ));
             Ok(())
         } else {
             Err(SignerError::WrongSpendAuthorizingKey)
