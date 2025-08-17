@@ -28,12 +28,18 @@ impl<T: SigType> SignatureWithSighashInfo<T> {
         Self { info, signature }
     }
 
+    /// Returns the `SignatureWithSighashInfo` in bytes.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut result = Vec::with_capacity(1 + self.info.associated_information.len() + 64);
         result.push(self.info.version);
         result.extend_from_slice(&self.info.associated_information);
         result.extend_from_slice(&<[u8; 64]>::from(self.signature));
         result
+    }
+
+    /// Returns the `SighashIngo` size in bytes.
+    pub fn sighash_info_size(&self) -> usize {
+        1 + self.info.associated_information.len()
     }
 
     /// Returns the signature.
