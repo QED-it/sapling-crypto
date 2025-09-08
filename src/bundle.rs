@@ -10,13 +10,11 @@ use zcash_note_encryption::{
 };
 
 use crate::{
+    builder::{VerBindingSig, VerSpendAuthSig},
     constants::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
     note_encryption::{
         CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
-    },
-    signature_with_sighash_info::{
-        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo,
     },
     value::ValueCommitment,
     Nullifier,
@@ -46,13 +44,13 @@ impl Authorization for EffectsOnly {
 #[derive(Debug, Clone)]
 pub struct Authorized {
     // TODO: Make this private.
-    pub binding_sig: BindingSignatureWithSighashInfo,
+    pub binding_sig: VerBindingSig,
 }
 
 impl Authorization for Authorized {
     type SpendProof = GrothProofBytes;
     type OutputProof = GrothProofBytes;
-    type AuthSig = SpendAuthSignatureWithSighashInfo;
+    type AuthSig = VerSpendAuthSig;
 }
 
 #[derive(Debug, Clone)]
@@ -521,13 +519,12 @@ pub mod testing {
     use proptest::collection::vec;
     use proptest::prelude::*;
     use rand::{rngs::StdRng, SeedableRng};
+    use zcash_spec::sighash_versioning::SIGHASH_V0;
 
     use crate::{
+        builder::{VerBindingSig, VerSpendAuthSig},
         constants::GROTH_PROOF_SIZE,
         note::testing::arb_cmu,
-        signature_with_sighash_info::{
-            BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
-        },
         value::{
             testing::{arb_note_value_bounded, arb_trapdoor},
             ValueCommitment, MAX_NOTE_VALUE,
@@ -574,7 +571,7 @@ pub mod testing {
                 nullifier,
                 rk,
                 zkproof,
-                spend_auth_sig: SpendAuthSignatureWithSighashInfo::new(SAPLING_SIG_V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
+                spend_auth_sig: VerSpendAuthSig::new(SIGHASH_V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
             }
         }
     }
@@ -631,8 +628,8 @@ pub mod testing {
                             shielded_outputs,
                             value_balance,
                             authorization: Authorized {
-                                binding_sig: BindingSignatureWithSighashInfo::new(
-                                    SAPLING_SIG_V0,
+                                binding_sig: VerBindingSig::new(
+                                    SIGHASH_V0,
                                     bsk.sign(&mut rng, &fake_bvk_bytes),
                                 ),
                             },

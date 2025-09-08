@@ -88,20 +88,20 @@ pprof = { version = "0.11", features = ["criterion", "flamegraph"] } # MSRV 1.56
 [features]
 default = ["multicore", "circuit"]
 std = [
-  "core2/std",
-  "dep:document-features",
-  "group/wnaf-memuse",
-  "redjubjub/std"
+    "core2/std",
+    "dep:document-features",
+    "group/wnaf-memuse",
+    "redjubjub/std"
 ]
 
 ## Enables creation of Sapling proofs
 circuit = [
-  "dep:bellman",
-  "bls12_381/bits",
-  "bls12_381/groups",
-  "bls12_381/pairings",
-  "jubjub/bits",
-  "std"
+    "dep:bellman",
+    "bls12_381/bits",
+    "bls12_381/groups",
+    "bls12_381/pairings",
+    "jubjub/bits",
+    "std"
 ]
 
 ## Enables multithreading support for creating proofs.
@@ -127,3 +127,4 @@ harness = false
 
 [patch.crates-io]
 zcash_note_encryption = { version = "0.4.1", git = "https://github.com/zcash/zcash_note_encryption", branch = "main" }
+zcash_spec = { git = "https://github.com/QED-it/zcash_spec", rev = "842d697048a8960348adcde704c24438fc5b4544" }

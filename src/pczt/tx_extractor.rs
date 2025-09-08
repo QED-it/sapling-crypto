@@ -1,12 +1,11 @@
 use rand::{CryptoRng, RngCore};
+use zcash_spec::sighash_versioning::SIGHASH_V0;
 
 use crate::{
+    builder::{VerBindingSig, VerSpendAuthSig},
     bundle::{
         Authorization, Authorized, EffectsOnly, GrothProofBytes, OutputDescription,
         SpendDescription,
-    },
-    signature_with_sighash_info::{
-        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
     },
     Bundle,
 };
@@ -136,7 +135,7 @@ pub struct Unbound {
 impl Authorization for Unbound {
     type SpendProof = GrothProofBytes;
     type OutputProof = GrothProofBytes;
-    type AuthSig = SpendAuthSignatureWithSighashInfo;
+    type AuthSig = VerSpendAuthSig;
 }
 
 impl<V> crate::Bundle<Unbound, V> {
@@ -151,7 +150,7 @@ impl<V> crate::Bundle<Unbound, V> {
         if self.shielded_spends().iter().all(|spend| {
             spend
                 .rk()
-                .verify(&sighash, spend.spend_auth_sig().signature())
+                .verify(&sighash, spend.spend_auth_sig().sig())
                 .is_ok()
         }) {
             Some(self.map_authorization(
@@ -160,10 +159,7 @@ impl<V> crate::Bundle<Unbound, V> {
                 |_, p| p,
                 |_, s| s,
                 |_, Unbound { bsk }| Authorized {
-                    binding_sig: BindingSignatureWithSighashInfo::new(
-                        SAPLING_SIG_V0,
-                        bsk.sign(rng, &sighash),
-                    ),
+                    binding_sig: VerBindingSig::new(SIGHASH_V0, bsk.sign(rng, &sighash)),
                 },
             ))
         } else {

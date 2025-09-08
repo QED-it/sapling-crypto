@@ -71,11 +71,8 @@ impl BatchValidator {
                 zkproof,
                 self,
                 |this, rk| {
-                    this.signatures.queue((
-                        (*rk).into(),
-                        *spend.spend_auth_sig().signature(),
-                        &sighash,
-                    ));
+                    this.signatures
+                        .queue(((*rk).into(), *spend.spend_auth_sig().sig(), &sighash));
                     true
                 },
                 |this, proof, public_inputs| {
@@ -121,7 +118,7 @@ impl BatchValidator {
         ctx.final_check(*bundle.value_balance(), |bvk| {
             self.signatures.queue((
                 bvk.into(),
-                *bundle.authorization().binding_sig.signature(),
+                *bundle.authorization().binding_sig.sig(),
                 &sighash,
             ));
             true
