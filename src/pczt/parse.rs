@@ -8,10 +8,10 @@ use zip32::ChildIndex;
 
 use super::{Bundle, Output, Spend, Zip32Derivation};
 use crate::{
+    builder::VerSpendAuthSig,
     bundle::GrothProofBytes,
     keys::{SpendAuthorizingKey, SpendValidatingKey},
     note::ExtractedNoteCommitment,
-    signature_with_sighash_info::SpendAuthSignatureWithSighashInfo,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, MerklePath, Node, Nullifier, PaymentAddress, ProofGenerationKey, Rseed,
 };
@@ -54,7 +54,7 @@ impl Spend {
         nullifier: [u8; 32],
         rk: [u8; 32],
         zkproof: Option<GrothProofBytes>,
-        spend_auth_sig: Option<SpendAuthSignatureWithSighashInfo>,
+        spend_auth_sig: Option<VerSpendAuthSig>,
         recipient: Option<[u8; 43]>,
         value: Option<u64>,
         rcm: Option<[u8; 32]>,

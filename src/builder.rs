@@ -10,6 +10,7 @@ use rand::{seq::SliceRandom, RngCore};
 use rand_core::CryptoRng;
 use redjubjub::{Binding, SpendAuth};
 use zcash_note_encryption::EphemeralKeyBytes;
+use zcash_spec::sighash_versioning::{VersionedSig, SIGHASH_V0};
 
 use crate::{
     bundle::{Authorization, Authorized, Bundle, GrothProofBytes},
@@ -19,9 +20,6 @@ use crate::{
     },
     note::ExtractedNoteCommitment,
     note_encryption::{sapling_note_encryption, Zip212Enforcement},
-    signature_with_sighash_info::{
-        BindingSignatureWithSighashInfo, SpendAuthSignatureWithSighashInfo, SAPLING_SIG_V0,
-    },
     util::generate_random_rseed_internal,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, Diversifier, MerklePath, Node, Note, Nullifier, PaymentAddress, SaplingIvk,
@@ -1124,10 +1122,13 @@ pub struct SigningParts {
     alpha: jubjub::Scalar,
 }
 
+/// A versioned binding signature.
+pub type VerBindingSig = VersionedSig<redjubjub::Signature<Binding>>;
+
 /// Marker for a partially-authorized bundle, in the process of being signed.
 #[derive(Clone, Debug)]
 pub struct PartiallyAuthorized {
-    binding_signature: BindingSignatureWithSighashInfo,
+    binding_signature: VerBindingSig,
     sighash: [u8; 32],
 }
 
@@ -1147,6 +1148,9 @@ impl InProgressSignatures for PartiallyAuthorized {
     type AuthSig = MaybeSigned;
 }
 
+/// A versioned SpendAuth signature.
+pub type VerSpendAuthSig = VersionedSig<redjubjub::Signature<SpendAuth>>;
+
 /// A heisen[`Signature`] for a particular [`SpendDescription`].
 ///
 /// [`Signature`]: redjubjub::Signature
@@ -1155,11 +1159,11 @@ pub enum MaybeSigned {
     /// The information needed to sign this [`SpendDescription`].
     SigningParts(SigningParts),
     /// The signature for this [`SpendDescription`].
-    Signature(SpendAuthSignatureWithSighashInfo),
+    Signature(VerSpendAuthSig),
 }
 
 impl MaybeSigned {
-    fn finalize(self) -> Result<SpendAuthSignatureWithSighashInfo, Error> {
+    fn finalize(self) -> Result<VerSpendAuthSig, Error> {
         match self {
             Self::Signature(sig) => Ok(sig),
             _ => Err(Error::MissingSignatures),
@@ -1182,15 +1186,15 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, Unsigned>, V> {
             |_, proof| proof,
             |rng, SigningMetadata { dummy_ask, parts }| match dummy_ask {
                 None => MaybeSigned::SigningParts(parts),
-                Some(ask) => MaybeSigned::Signature(SpendAuthSignatureWithSighashInfo::new(
-                    SAPLING_SIG_V0,
+                Some(ask) => MaybeSigned::Signature(VerSpendAuthSig::new(
+                    SIGHASH_V0,
                     ask.randomize(&parts.alpha).sign(rng, &sighash),
                 )),
             },
             |rng, auth: InProgress<P, Unsigned>| InProgress {
                 sigs: PartiallyAuthorized {
-                    binding_signature: BindingSignatureWithSighashInfo::new(
-                        SAPLING_SIG_V0,
+                    binding_signature: VerBindingSig::new(
+                        SIGHASH_V0,
                         auth.sigs.bsk.sign(rng, &sighash),
                     ),
                     sighash,
@@ -1234,8 +1238,8 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             |_, proof| proof,
             |rng, maybe| match maybe {
                 MaybeSigned::SigningParts(parts) if parts.ak == expected_ak => {
-                    MaybeSigned::Signature(SpendAuthSignatureWithSighashInfo::new(
-                        SAPLING_SIG_V0,
+                    MaybeSigned::Signature(VerSpendAuthSig::new(
+                        SIGHASH_V0,
                         ask.randomize(&parts.alpha).sign(rng, &sighash),
                     ))
                 }
@@ -1250,17 +1254,11 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
     /// Each signature will be applied to the one input for which it is valid. An error
     /// will be returned if the signature is not valid for any inputs, or if it is valid
     /// for more than one input.
-    pub fn append_signatures(
-        self,
-        signatures: &[SpendAuthSignatureWithSighashInfo],
-    ) -> Result<Self, Error> {
+    pub fn append_signatures(self, signatures: &[VerSpendAuthSig]) -> Result<Self, Error> {
         signatures.iter().try_fold(self, Self::append_signature)
     }
 
-    fn append_signature(
-        self,
-        signature: &SpendAuthSignatureWithSighashInfo,
-    ) -> Result<Self, Error> {
+    fn append_signature(self, signature: &VerSpendAuthSig) -> Result<Self, Error> {
         let sighash = self.authorization().sigs.sighash;
         let mut signature_valid_for = 0usize;
         let bundle = self.map_authorization(
@@ -1270,7 +1268,7 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             |ctx, maybe| match maybe {
                 MaybeSigned::SigningParts(parts) => {
                     let rk = parts.ak.randomize(&parts.alpha);
-                    if rk.verify(&sighash, signature.signature()).is_ok() {
+                    if rk.verify(&sighash, signature.sig()).is_ok() {
                         **ctx += 1;
                         MaybeSigned::Signature(signature.clone())
                     } else {
