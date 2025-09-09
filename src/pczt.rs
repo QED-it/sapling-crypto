@@ -8,6 +8,7 @@ use core::fmt;
 use getset::Getters;
 use redjubjub::{Binding, SpendAuth};
 use zcash_note_encryption::{EphemeralKeyBytes, OutgoingCipherKey, OUT_CIPHERTEXT_SIZE};
+use zcash_spec::sighash_versioning::SighashVersion;
 use zip32::ChildIndex;
 
 use crate::{
@@ -338,4 +339,29 @@ impl Zip32Derivation {
             None
         }
     }
+}
+
+/// Parses a `VerSpendAuthSig` from its raw byte components.
+///
+/// # Arguments
+///
+/// * `version_bytes`: The raw bytes representing a `SighashVersion`.
+/// * `sig_bytes`: The raw bytes of a `repallas::Signature<SpendAuth>`.
+///
+/// # Returns
+///
+/// A `Result` containing a `VerSpendAuthSig` if successful.
+/// The `version` field is derived from `version_bytes`.
+/// The `signature` field is derived from `sig_bytes`.
+///
+/// # Errors
+///
+/// * `InvalidSighashVersion`: If `version_bytes` cannot be parsed into a valid `SighashVersion`.
+pub fn parse_ver_spend_auth_sig(
+    version_bytes: Vec<u8>,
+    sig_bytes: [u8; 64],
+) -> Result<VerSpendAuthSig, ParseError> {
+    let version =
+        SighashVersion::from_bytes(&version_bytes).ok_or(ParseError::InvalidSighashVersion)?;
+    Ok(VerSpendAuthSig::new(version, sig_bytes.into()))
 }

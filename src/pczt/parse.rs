@@ -282,6 +282,8 @@ pub enum ParseError {
     InvalidRandomizedKey,
     /// An invalid `recipient` was provided.
     InvalidRecipient,
+    /// An invalid `sighash_version` was provided.
+    InvalidSighashVersion,
     /// An invalid `alpha` was provided.
     InvalidSpendAuthRandomizer,
     /// An invalid `cv` was provided.
