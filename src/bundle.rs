@@ -316,10 +316,10 @@ impl SpendDescriptionV5 {
         self,
         anchor: bls12_381::Scalar,
         zkproof: GrothProofBytes,
-        spend_auth_sig: redjubjub::Signature<SpendAuth>,
+        spend_auth_sig: VerSpendAuthSig,
     ) -> SpendDescription<A>
     where
-        A: Authorization<SpendProof = GrothProofBytes, AuthSig = redjubjub::Signature<SpendAuth>>,
+        A: Authorization<SpendProof = GrothProofBytes, AuthSig = VerSpendAuthSig>,
     {
         SpendDescription {
             cv: self.cv,
