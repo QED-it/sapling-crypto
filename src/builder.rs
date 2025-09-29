@@ -10,7 +10,6 @@ use rand::{seq::SliceRandom, RngCore};
 use rand_core::CryptoRng;
 use redjubjub::{Binding, SpendAuth};
 use zcash_note_encryption::EphemeralKeyBytes;
-use zcash_spec::sighash_versioning::{VersionedSig, SIGHASH_V0};
 
 use crate::{
     bundle::{Authorization, Authorized, Bundle, GrothProofBytes},
@@ -20,6 +19,7 @@ use crate::{
     },
     note::ExtractedNoteCommitment,
     note_encryption::{sapling_note_encryption, Zip212Enforcement},
+    sapling_sighash_versioning::{SaplingSighashVersion, VerBindingSig, VerSpendAuthSig},
     util::generate_random_rseed_internal,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, Diversifier, MerklePath, Node, Note, Nullifier, PaymentAddress, SaplingIvk,
@@ -1122,9 +1122,6 @@ pub struct SigningParts {
     alpha: jubjub::Scalar,
 }
 
-/// A versioned binding signature.
-pub type VerBindingSig = VersionedSig<redjubjub::Signature<Binding>>;
-
 /// Marker for a partially-authorized bundle, in the process of being signed.
 #[derive(Clone, Debug)]
 pub struct PartiallyAuthorized {
@@ -1147,9 +1144,6 @@ pub struct SigningMetadata {
 impl InProgressSignatures for PartiallyAuthorized {
     type AuthSig = MaybeSigned;
 }
-
-/// A versioned SpendAuth signature.
-pub type VerSpendAuthSig = VersionedSig<redjubjub::Signature<SpendAuth>>;
 
 /// A heisen[`Signature`] for a particular [`SpendDescription`].
 ///
@@ -1187,14 +1181,14 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, Unsigned>, V> {
             |rng, SigningMetadata { dummy_ask, parts }| match dummy_ask {
                 None => MaybeSigned::SigningParts(parts),
                 Some(ask) => MaybeSigned::Signature(VerSpendAuthSig::new(
-                    SIGHASH_V0,
+                    SaplingSighashVersion::V0,
                     ask.randomize(&parts.alpha).sign(rng, &sighash),
                 )),
             },
             |rng, auth: InProgress<P, Unsigned>| InProgress {
                 sigs: PartiallyAuthorized {
                     binding_signature: VerBindingSig::new(
-                        SIGHASH_V0,
+                        SaplingSighashVersion::V0,
                         auth.sigs.bsk.sign(rng, &sighash),
                     ),
                     sighash,
@@ -1239,7 +1233,7 @@ impl<P: InProgressProofs, V> Bundle<InProgress<P, PartiallyAuthorized>, V> {
             |rng, maybe| match maybe {
                 MaybeSigned::SigningParts(parts) if parts.ak == expected_ak => {
                     MaybeSigned::Signature(VerSpendAuthSig::new(
-                        SIGHASH_V0,
+                        SaplingSighashVersion::V0,
                         ask.randomize(&parts.alpha).sign(rng, &sighash),
                     ))
                 }

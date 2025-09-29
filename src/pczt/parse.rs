@@ -8,10 +8,11 @@ use zip32::ChildIndex;
 
 use super::{Bundle, Output, Spend, Zip32Derivation};
 use crate::{
-    builder::VerSpendAuthSig,
     bundle::GrothProofBytes,
     keys::{SpendAuthorizingKey, SpendValidatingKey},
     note::ExtractedNoteCommitment,
+    sapling_sighash_versioning::SaplingSighashVersion,
+    sapling_sighash_versioning::VerSpendAuthSig,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, MerklePath, Node, Nullifier, PaymentAddress, ProofGenerationKey, Rseed,
 };
@@ -46,6 +47,15 @@ impl Bundle {
     }
 }
 
+/// Converts an unsigned 8-bit integer into an `Option<SaplingSighashVersion>`.
+fn sapling_sighash_version_from_u8(n: u8) -> Option<SaplingSighashVersion> {
+    match n {
+        0 => Some(SaplingSighashVersion::V0),
+        u8::MAX => Some(SaplingSighashVersion::NoVersion),
+        _ => None,
+    }
+}
+
 impl Spend {
     /// Parses a PCZT spend from its component parts.
     #[allow(clippy::too_many_arguments)]
@@ -54,7 +64,7 @@ impl Spend {
         nullifier: [u8; 32],
         rk: [u8; 32],
         zkproof: Option<GrothProofBytes>,
-        spend_auth_sig: Option<VerSpendAuthSig>,
+        spend_auth_sig: Option<(u8, [u8; 64])>,
         recipient: Option<[u8; 43]>,
         value: Option<u64>,
         rcm: Option<[u8; 32]>,
@@ -75,6 +85,16 @@ impl Spend {
 
         let rk = redjubjub::VerificationKey::try_from(rk)
             .map_err(|_| ParseError::InvalidRandomizedKey)?;
+
+        let spend_auth_sig = spend_auth_sig
+            .as_ref()
+            .map(|(version, sig)| {
+                let version = sapling_sighash_version_from_u8(*version)
+                    .ok_or(ParseError::InvalidSighashVersion)?;
+                let sig = redjubjub::Signature::from(*sig);
+                Ok(VerSpendAuthSig::new(version, sig))
+            })
+            .transpose()?;
 
         let recipient = recipient
             .as_ref()
@@ -282,6 +302,8 @@ pub enum ParseError {
     InvalidRandomizedKey,
     /// An invalid `recipient` was provided.
     InvalidRecipient,
+    /// An invalid `SaplingSighashVersion` was provided.
+    InvalidSighashVersion,
     /// An invalid `alpha` was provided.
     InvalidSpendAuthRandomizer,
     /// An invalid `cv` was provided.

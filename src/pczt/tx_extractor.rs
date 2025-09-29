@@ -1,12 +1,11 @@
 use rand::{CryptoRng, RngCore};
-use zcash_spec::sighash_versioning::SIGHASH_V0;
 
 use crate::{
-    builder::{VerBindingSig, VerSpendAuthSig},
     bundle::{
         Authorization, Authorized, EffectsOnly, GrothProofBytes, OutputDescription,
         SpendDescription,
     },
+    sapling_sighash_versioning::{SaplingSighashVersion, VerBindingSig, VerSpendAuthSig},
     Bundle,
 };
 
@@ -159,7 +158,10 @@ impl<V> crate::Bundle<Unbound, V> {
                 |_, p| p,
                 |_, s| s,
                 |_, Unbound { bsk }| Authorized {
-                    binding_sig: VerBindingSig::new(SIGHASH_V0, bsk.sign(rng, &sighash)),
+                    binding_sig: VerBindingSig::new(
+                        SaplingSighashVersion::V0,
+                        bsk.sign(rng, &sighash),
+                    ),
                 },
             ))
         } else {

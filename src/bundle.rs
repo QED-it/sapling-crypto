@@ -10,12 +10,12 @@ use zcash_note_encryption::{
 };
 
 use crate::{
-    builder::{VerBindingSig, VerSpendAuthSig},
     constants::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
     note_encryption::{
         CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
     },
+    sapling_sighash_versioning::{VerBindingSig, VerSpendAuthSig},
     value::ValueCommitment,
     Nullifier,
 };
@@ -316,10 +316,10 @@ impl SpendDescriptionV5 {
         self,
         anchor: bls12_381::Scalar,
         zkproof: GrothProofBytes,
-        spend_auth_sig: redjubjub::Signature<SpendAuth>,
+        spend_auth_sig: VerSpendAuthSig,
     ) -> SpendDescription<A>
     where
-        A: Authorization<SpendProof = GrothProofBytes, AuthSig = redjubjub::Signature<SpendAuth>>,
+        A: Authorization<SpendProof = GrothProofBytes, AuthSig = VerSpendAuthSig>,
     {
         SpendDescription {
             cv: self.cv,
@@ -519,12 +519,11 @@ pub mod testing {
     use proptest::collection::vec;
     use proptest::prelude::*;
     use rand::{rngs::StdRng, SeedableRng};
-    use zcash_spec::sighash_versioning::SIGHASH_V0;
 
     use crate::{
-        builder::{VerBindingSig, VerSpendAuthSig},
         constants::GROTH_PROOF_SIZE,
         note::testing::arb_cmu,
+        sapling_sighash_versioning::{SaplingSighashVersion, VerBindingSig, VerSpendAuthSig},
         value::{
             testing::{arb_note_value_bounded, arb_trapdoor},
             ValueCommitment, MAX_NOTE_VALUE,
@@ -571,7 +570,7 @@ pub mod testing {
                 nullifier,
                 rk,
                 zkproof,
-                spend_auth_sig: VerSpendAuthSig::new(SIGHASH_V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
+                spend_auth_sig: VerSpendAuthSig::new(SaplingSighashVersion::V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
             }
         }
     }
@@ -629,7 +628,7 @@ pub mod testing {
                             value_balance,
                             authorization: Authorized {
                                 binding_sig: VerBindingSig::new(
-                                    SIGHASH_V0,
+                                    SaplingSighashVersion::V0,
                                     bsk.sign(&mut rng, &fake_bvk_bytes),
                                 ),
                             },

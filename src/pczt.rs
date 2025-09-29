@@ -11,10 +11,10 @@ use zcash_note_encryption::{EphemeralKeyBytes, OutgoingCipherKey, OUT_CIPHERTEXT
 use zip32::ChildIndex;
 
 use crate::{
-    builder::VerSpendAuthSig,
     bundle::GrothProofBytes,
     keys::SpendAuthorizingKey,
     note::ExtractedNoteCommitment,
+    sapling_sighash_versioning::VerSpendAuthSig,
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, MerklePath, Nullifier, PaymentAddress, ProofGenerationKey, Rseed,
 };
