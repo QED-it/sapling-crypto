@@ -23,7 +23,7 @@ pub struct SaplingVersionedSig<T: SigType> {
 }
 
 impl<T: SigType> SaplingVersionedSig<T> {
-    /// Constructs an `SaplingVersionedSig` from its constituent parts.
+    /// Constructs a `SaplingVersionedSig` from its constituent parts.
     pub fn new(version: SaplingSighashVersion, sig: Signature<T>) -> Self {
         Self { version, sig }
     }

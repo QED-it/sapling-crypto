@@ -11,8 +11,7 @@ use crate::{
     bundle::GrothProofBytes,
     keys::{SpendAuthorizingKey, SpendValidatingKey},
     note::ExtractedNoteCommitment,
-    sapling_sighash_versioning::SaplingSighashVersion,
-    sapling_sighash_versioning::VerSpendAuthSig,
+    sapling_sighash_versioning::{SaplingSighashVersion, VerSpendAuthSig},
     value::{NoteValue, ValueCommitTrapdoor, ValueCommitment, ValueSum},
     Anchor, MerklePath, Node, Nullifier, PaymentAddress, ProofGenerationKey, Rseed,
 };
