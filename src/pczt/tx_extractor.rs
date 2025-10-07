@@ -149,7 +149,7 @@ impl<V> crate::Bundle<Unbound, V> {
         if self.shielded_spends().iter().all(|spend| {
             spend
                 .rk()
-                .verify(&sighash, spend.spend_auth_sig().sig())
+                .verify(&sighash, spend.spend_auth().sig())
                 .is_ok()
         }) {
             Some(self.map_authorization(

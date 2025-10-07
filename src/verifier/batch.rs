@@ -72,7 +72,7 @@ impl BatchValidator {
                 self,
                 |this, rk| {
                     this.signatures
-                        .queue(((*rk).into(), *spend.spend_auth_sig().sig(), &sighash));
+                        .queue(((*rk).into(), *spend.spend_auth().sig(), &sighash));
                     true
                 },
                 |this, proof, public_inputs| {

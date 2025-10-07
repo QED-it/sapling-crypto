@@ -124,7 +124,7 @@ impl<A: Authorization, V> Bundle<A, V> {
                     nullifier: d.nullifier,
                     rk: d.rk,
                     zkproof: spend_proof(&mut context, d.zkproof),
-                    spend_auth_sig: auth_sig(&mut context, d.spend_auth_sig),
+                    spend_auth: auth_sig(&mut context, d.spend_auth),
                 })
                 .collect(),
             shielded_outputs: self
@@ -164,7 +164,7 @@ impl<A: Authorization, V> Bundle<A, V> {
                         nullifier: d.nullifier,
                         rk: d.rk,
                         zkproof: spend_proof(&mut context, d.zkproof)?,
-                        spend_auth_sig: auth_sig(&mut context, d.spend_auth_sig)?,
+                        spend_auth: auth_sig(&mut context, d.spend_auth)?,
                     })
                 })
                 .collect::<Result<_, _>>()?,
@@ -221,15 +221,15 @@ pub struct SpendDescription<A: Authorization> {
     nullifier: Nullifier,
     rk: redjubjub::VerificationKey<SpendAuth>,
     zkproof: A::SpendProof,
-    spend_auth_sig: A::AuthSig,
+    spend_auth: A::AuthSig,
 }
 
 impl<A: Authorization> core::fmt::Debug for SpendDescription<A> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
         write!(
             f,
-            "SpendDescription(cv = {:?}, anchor = {:?}, nullifier = {:?}, rk = {:?}, spend_auth_sig = {:?})",
-            self.cv, self.anchor, self.nullifier, self.rk, self.spend_auth_sig
+            "SpendDescription(cv = {:?}, anchor = {:?}, nullifier = {:?}, rk = {:?}, spend_auth = {:?})",
+            self.cv, self.anchor, self.nullifier, self.rk, self.spend_auth
         )
     }
 }
@@ -242,7 +242,7 @@ impl<A: Authorization> SpendDescription<A> {
         nullifier: Nullifier,
         rk: redjubjub::VerificationKey<SpendAuth>,
         zkproof: A::SpendProof,
-        spend_auth_sig: A::AuthSig,
+        spend_auth: A::AuthSig,
     ) -> Self {
         Self {
             cv,
@@ -250,7 +250,7 @@ impl<A: Authorization> SpendDescription<A> {
             nullifier,
             rk,
             zkproof,
-            spend_auth_sig,
+            spend_auth,
         }
     }
 
@@ -280,8 +280,8 @@ impl<A: Authorization> SpendDescription<A> {
     }
 
     /// Returns the authorization signature for this spend.
-    pub fn spend_auth_sig(&self) -> &A::AuthSig {
-        &self.spend_auth_sig
+    pub fn spend_auth(&self) -> &A::AuthSig {
+        &self.spend_auth
     }
 }
 
@@ -316,7 +316,7 @@ impl SpendDescriptionV5 {
         self,
         anchor: bls12_381::Scalar,
         zkproof: GrothProofBytes,
-        spend_auth_sig: VerSpendAuthSig,
+        spend_auth: VerSpendAuthSig,
     ) -> SpendDescription<A>
     where
         A: Authorization<SpendProof = GrothProofBytes, AuthSig = VerSpendAuthSig>,
@@ -327,7 +327,7 @@ impl SpendDescriptionV5 {
             nullifier: self.nullifier,
             rk: self.rk,
             zkproof,
-            spend_auth_sig,
+            spend_auth,
         }
     }
 }
@@ -570,7 +570,7 @@ pub mod testing {
                 nullifier,
                 rk,
                 zkproof,
-                spend_auth_sig: VerSpendAuthSig::new(SaplingSighashVersion::V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
+                spend_auth: VerSpendAuthSig::new(SaplingSighashVersion::V0, sk1.sign(&mut rng, &fake_sighash_bytes)),
             }
         }
     }
