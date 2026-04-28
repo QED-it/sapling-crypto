@@ -441,7 +441,9 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
     }
 
     fn enc_ciphertext_compact(&self) -> CompactEncCiphertext {
-        unimplemented!("This function is not required for sapling")
+        let mut data = [0u8; COMPACT_NOTE_SIZE];
+        data.copy_from_slice(&self.enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE]);
+        NoteBytesData(data)
     }
 }
 
@@ -501,12 +503,12 @@ impl OutputDescriptionV5 {
 
 impl<A> From<OutputDescription<A>> for CompactOutputDescription {
     fn from(out: OutputDescription<A>) -> CompactOutputDescription {
+        let enc_ciphertext = out.enc_ciphertext_compact().0;
+
         CompactOutputDescription {
             ephemeral_key: out.ephemeral_key,
             cmu: out.cmu,
-            enc_ciphertext: out.enc_ciphertext.as_ref()[..COMPACT_NOTE_SIZE]
-                .try_into()
-                .unwrap(),
+            enc_ciphertext,
         }
     }
 }
