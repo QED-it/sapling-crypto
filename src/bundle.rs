@@ -420,6 +420,9 @@ impl<Proof: DynamicUsage> DynamicUsage for OutputDescription<Proof> {
     }
 }
 
+type EncCiphertext = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
+type CompactEncCiphertext = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
+
 impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
     fn ephemeral_key(&self) -> EphemeralKeyBytes {
         self.ephemeral_key.clone()
@@ -433,11 +436,11 @@ impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
         self.cmu.to_bytes()
     }
 
-    fn enc_ciphertext(&self) -> Option<&NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>> {
+    fn enc_ciphertext(&self) -> Option<&EncCiphertext> {
         Some(&self.enc_ciphertext)
     }
 
-    fn enc_ciphertext_compact(&self) -> NoteBytesData<{ COMPACT_NOTE_SIZE }> {
+    fn enc_ciphertext_compact(&self) -> CompactEncCiphertext {
         unimplemented!("This function is not required for sapling")
     }
 }
