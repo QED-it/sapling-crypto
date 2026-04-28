@@ -13,7 +13,8 @@ use crate::{
     constants::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
     note_encryption::{
-        CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,EncCiphertext, CompactEncCiphertext
+        CompactEncCiphertext, CompactOutputDescription, EncCiphertext, SaplingDomain,
+        COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
     },
     value::ValueCommitment,
     Nullifier,
