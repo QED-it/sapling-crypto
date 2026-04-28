@@ -13,7 +13,7 @@ use crate::{
     constants::GROTH_PROOF_SIZE,
     note::ExtractedNoteCommitment,
     note_encryption::{
-        CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,
+        CompactOutputDescription, SaplingDomain, COMPACT_NOTE_SIZE, ENC_CIPHERTEXT_SIZE,EncCiphertext, CompactEncCiphertext
     },
     value::ValueCommitment,
     Nullifier,
@@ -419,9 +419,6 @@ impl<Proof: DynamicUsage> DynamicUsage for OutputDescription<Proof> {
         self.zkproof.dynamic_usage_bounds()
     }
 }
-
-type EncCiphertext = NoteBytesData<{ ENC_CIPHERTEXT_SIZE }>;
-type CompactEncCiphertext = NoteBytesData<{ COMPACT_NOTE_SIZE }>;
 
 impl<A> ShieldedOutput<SaplingDomain> for OutputDescription<A> {
     fn ephemeral_key(&self) -> EphemeralKeyBytes {
